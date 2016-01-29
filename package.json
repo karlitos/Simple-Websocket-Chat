@@ -1,0 +1,19 @@
+{
+	"name": "Node.js-Chat",
+	"description": "Simple chat with Node.js",
+	"author": "Karlitos, heavilly inspired by: NodeCode.de",
+	"main": "server.js",
+	"scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "app": "node server.js",
+    "cluster": "DEBUG=* node cluster.js"
+  },
+	"dependencies" : {
+		"express": "3.x",
+		"socket.io": "1.3.x",
+		"redis": "1.x",
+		"socket.io-redis": "*",
+		"cluster": "0.7.x",
+		"sticky-session": "^1.0.1"
+	}
+}

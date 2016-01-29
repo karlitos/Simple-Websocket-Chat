@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Node.js Chat</title>
+		<meta charset="utf-8">
+		<link rel="stylesheet" href="style.css" />
+		<script src="socket.io/socket.io.js"></script>
+		<script src="jquery.min.js"></script>
+		<script src="client.js"></script>
+	</head>
+	<body>
+		<header>Node.js Chat <a href="http://www.karlitos.net/">von Karlitos</a></header>
+		<ul id="content"></ul>
+		<footer>
+			<input id="name" type="text" placeholder="your name" />
+			<input id="text" type="text" placeholder="write something..." size="55"/>
+			<input id="send" type="submit" class="btn" value="send" />
+			Channel:
+			<input id="room" type="text" value="defaultChannel" />
+			<input id="join" type="submit" class="btn" value="join" />
+		</footer>
+	</body>
+</html>
