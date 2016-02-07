@@ -1,8 +1,7 @@
 var express = require('express')
 ,   app = express()
 ,   server = require('http').createServer(app)
-,   io = require('socket.io').listen(server)
-,   redis = require('socket.io-redis')
+,   socketServer  = require('./lib/vws.socket.js').server
 ,   conf = require('./config.json');
 
 exports.server = server;
@@ -14,47 +13,74 @@ app.use(express.static(__dirname + '/public'));
 // route the / path
 app.get('/', function (req, res) {
 	// send the index.html in the reponse
-	res.sendfile(__dirname + '/public/index.html');
+	res.sendfile(__dirname + '/public/client.html');
 });
-
-// Redis adapter
-
-// Under Fedora 23 you have to install redis with: dnf install redis and then start redis with redis-server
-// To start redis as a service you have to uncomment "daemonize yes" in /etc/redis.conf
-io.adapter(redis({ host: conf.redisUri, port: conf.redisPort }));
 
 // Websocket
 
-// Callback when a client connects
-io.sockets.on('connection', function (socket) {
-	// store the room name in the socket session for this client
-	socket.room = 'defaultChannel';
-	// send client to room 1
-	socket.join('defaultChannel');
-	// echo to client they've connected
-	socket.emit('chat', { time: new Date(), text: 'You have connected to room defaultChannel on the server!' });
-	// if a message is received
-	socket.on('chat', function (data) {
-		// the it will be send to all other clients
-		socket.broadcast.in(socket.room).emit('chat', { time: new Date(), name: data.name || 'anonymous', text: data.text });
-	});
-	// if a client joins a channel
-	socket.on('join', function (room) {
-	// store the room name in the socket session for this client
-	socket.room = room;
-	// send client to room 1
-	socket.join(room);
-	console.log('Client joined room ' + room);
-	});
-});
+var websocketConfig ={
+	port		: conf.webSocketPort
+};
+
+//  stores connections/clients
+var clients = {};
+
+socketServer( 'testServer1', function ( connection, webSocketServer ) {
+
+  connection.on('open', function (id) {
+    console.log('[open] - client connected, connection-id: %s', id);
+
+    // store the connections/clients id
+    clients[id] = 'connected';
+    console.log('All clients', clients);
+  });
+
+  connection.on('message', function ( msg ) {
+    console.log('[message] - received message', msg);
+    //console.log(msg);
+    var message = JSON.parse(msg.utf8Data);
+
+    // send the mesage to all connections except the one it cames from
+    if (connection.id in clients){
+      var otherClients = clients;
+      delete otherClients[connection.id];
+
+			//console.log('Availible connections', clients);
+      //console.log('Other clients', otherClients);
+      // convert to array
+      otherClients = Object.keys(otherClients);
+      if (otherClients !== undefined || otherClients.length != 0) {
+        connection.send(JSON.stringify(message.action), otherClients );
+        console.log('Sending ', message.action, ' to other clients ', otherClients);
+      }
+    }
+  });
+
+  connection.on('error', function ( err ) {
+    console.log(err);
+  });
+
+  connection.on('close', function(id){
+    //console.log('[close]');
+    console.log('[close] - client disconnected, connection-id: %s', connection.id);
+    if (connection.id in clients){
+      // store the connections/clients id
+      delete clients[connection.id];
+      var connections = Object.keys(clients);
+    }
+  });
+
+}).config( websocketConfig );
+
+
 
 run = function() {
-  return server.listen(conf.defaultPort, function() {
+	return server.listen(conf.defaultPort, function() {
 		// log running client
 		console.log('Server running under http://127.0.0.1:' + conf.defaultPort + '/');
-  });
+	});
 };
 
 if (require.main === module) {
-  run();
+	run();
 }

@@ -1,7 +1,6 @@
 {
 	"defaultPort" : 8080,
+  "webSocketPort" : 8081,
 	"redisUri" : "localhost",
-	"redisPort" : 6379,
-	"syncIntervall" : 1000,
-	"numberOfWorkers" : 2
+	"redisPort" : 6379
 }

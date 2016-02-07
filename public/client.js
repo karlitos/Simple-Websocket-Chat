@@ -1,68 +1,134 @@
-$(document).ready(function(){
-	// WebSocket
-	var socket = io.connect();
 
-	// new message
-	socket.on('chat', function (data) {
-		var time = new Date(data.time);
-		$('#content').append(
-			$('<li></li>').append(
-				// date-time
-				$('<span>').text('[' +
-					(time.getHours() < 10 ? '0' + time.getHours() : time.getHours())
-					+ ':' +
-					(time.getMinutes() < 10 ? '0' + time.getMinutes() : time.getMinutes())
-					+ '] '
-				),
-				// name
-				$('<b>').text(typeof(data.name) != 'undefined' ? data.name + ': ' : ''),
-				// text
-				$('<span>').text(data.text))
-		);
-		// scroll down
-		$('body').scrollTop($('body')[0].scrollHeight);
-	});
-	// send message
-	function send(){
-		var name = $('#name').val();
-		var text = $('#text').val();
-		// send message
-		socket.emit('chat', { name: name, text: text });
-		// clear text field
-		$('#text').val('');
+codeTest = {
+	config: {
+		server: '127.0.0.1:8081'
+	},
+	nickName: 'person1',
+	channel: 'defaultChannel',
+	client: null
+};
 
-		// display the message
-		var time = new Date();
-		$('#content').append(
-			$('<li></li>').append(
-				// date-time
-				$('<span>').text('[' +
-					(time.getHours() < 10 ? '0' + time.getHours() : time.getHours())
-					+ ':' +
-					(time.getMinutes() < 10 ? '0' + time.getMinutes() : time.getMinutes())
-					+ '] '
-				),
-				// name
-				$('<b>').text('YOU: '),
-				// text
-				$('<span>').text(text)
-		));
+jQuery(document).ready(init);
 
-	}
-	// on-click event
-	$('#send').click(send);
-	// enter keypress event
-	$('#text').keypress(function (e) {
-		if (e.which == 13) {
-			send();
+
+function init() {
+	jQuery('#sendMsg').on(
+		'click',
+		function() {
+			sendMsg(jQuery('#message').val());
 		}
-	});
-	// join channel
-	function join(){
-		var room = $('#room').val();
-		socket.emit('join', room);
-		$('#content').append(
-			$('<li></li>').append($('<span>').text('[Joining room ' + room + ']')));
+	);
+	jQuery('#setNick').on(
+		'click',
+		setNick
+	);
+	jQuery('#joinChannel').on(
+		'click',
+		joinChannel
+	);
+	jQuery('#connect').on(
+		'click',
+		function(e) {
+			if (typeof codeTest.client !== null) {
+				delete codeTest.client;
+			}
+			codeTest.config.server = jQuery('#serverUrl').val();
+			codeTest.client = setupSocket();
+		}
+	);
+	drawMessage({ author:'system', channel: codeTest.channel, text: 'welcome to the test', timestamp: new Date().toLocaleTimeString() });
+};
+
+
+function joinChannel() {
+	var channel = jQuery('#channel').val();
+	jQuery('#messages').empty();codeTest.channel = channel;
+	drawMessage({ author:'system', channel: codeTest.channel, text: 'welcome to a new channel (' + channel + '), ' + codeTest.nickName, timestamp: new Date().toLocaleTimeString() });
+	return codeTest.channel;
+};
+
+
+function setNick() {
+	var nick = jQuery('#nickname').val();
+	codeTest.nickName = nick;
+	drawMessage({ author:'system', channel: codeTest.channel, text: 'greetings, ' + nick + '!', timestamp: new Date().toLocaleTimeString() });
+	return codeTest.nickName;
+};
+
+
+function sendMsg(text) {
+	var data = {
+		author: codeTest.nickName,
+		channel: codeTest.channel,
+		text: text
 	};
-	$('#join').click(join);
-});
+	drawMessage({ author:'YOU', channel: data.channel, text: data.text, timestamp: new Date().toLocaleTimeString() });
+	return send2server('msg', data);
+};
+
+
+function send2server(command, data) {
+	return codeTest.client.send(
+		{
+			command:command,
+			data: [
+				{
+					author: codeTest.nickName,
+					channel: codeTest.channel,
+					text: data.text
+				}
+			]
+		}
+	);
+};
+
+
+function handleMessageFromServer(msg) {
+	if (typeof msg.command !== 'undefined' && typeof msg.data !== 'undefined') {
+		//if (msg.command === 'messages') {
+		if (msg.command === 'msg') {
+			console.log('Received message', msg);
+			for (var n=0; n<msg.data.length; n+=1) {
+				drawMessage(msg.data[n]);
+			}
+		}
+	}
+};
+
+
+function drawMessage(data) {
+	var msgString = '<span>{' + data.channel + '@' + data.timestamp + '} [' + data.author + '] ' + data.text + '</span><br/>';
+	jQuery('#messages').append(msgString);
+};
+
+
+function setupSocket() {
+	try {
+		//var testSocket = new Socket(codeTest.config.server, { autoReconnect: true });
+		var testSocket = new Socket(codeTest.config.server, { autoReconnect: false });
+		testSocket.on('reconnect', function(msg, e) {
+			console.log('reconnected');
+		});
+		testSocket.on('close', function(e) {
+			console.log('[close]');
+			jQuery('#wsstatus').text(Date.now() + ' connection closed');
+		});
+		testSocket.on('error', function(e) {
+			console.log('[error]');
+			jQuery('#wsstatus').text(Date.now() + ' connection error');
+		});
+		testSocket.on('open', function(e) {
+			jQuery('#wsstatus').text(Date.now() + ' connection open');
+			console.log('[open]');
+			testSocket.on('message', function(msg, e) {
+				console.log('[message]');
+				console.log(msg);
+				handleMessageFromServer(msg);
+			});
+		});
+		jQuery('#wsstatus').text(Date.now() + ' connecting to [' + codeTest.config.server + ']');
+	} catch(err) {
+		jQuery('#wsstatus').text(Date.now() + ' connection failed: ' + err);
+	}
+	return testSocket;
+};
