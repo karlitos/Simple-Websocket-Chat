@@ -1,16 +1,3 @@
-Simple, Node.js websocket-based chat. The client and some logic is heavily inspired by the tutorial http://nodecode.de/chat-nodejs-websocket.
+I failed to use the provided wrapper and the WebSocket library. Whatever I tried, I was not able to send any messages to other connected clients, the server also sends the message only to the client, from which the message comes, no matter if array with connection Id's is provided or not. The documentation of the wrapper is very basic, but the client corresponds in my opinion to the example from the GitHub repository.
 
-# Install
-npm install
-
-# To run one instance
-npm run app
-
-# To run more than one instance
-npm run cluster
-
-_(The cluster run with some debug mode enabled so it is possible to watch some workers spawn and)_
-
-# Redis
-
-The code depends on __redis db__. On Fedora 23 you can install __redis__ using: _dnf install redis_ and then start redis with redis-server.  To start redis as a service you have to uncomment "daemonize yes" in _/etc/redis.conf_.
+Also, I faced an issue, where the client every message. I found several complaints in the Internet, some of them related to the jQuery events. It was mentioned, that the WebSocket library should be not "thread-safe". Correcting tis would need some sever debugging of the provided wrapper.
